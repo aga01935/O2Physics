@@ -19,6 +19,11 @@ o2physics_add_dpl_workflow(upc-forward
                   PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
                   COMPONENT_NAME Analysis)
 
+#o2physics_add_dpl_workflow(upc-forward-mc
+  #                SOURCES upcForwardMC.cxx
+  #                PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
+  #                COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(diff-mcdatascanner
                   SOURCES diffMCDataScanner.cxx
                   PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
@@ -28,3 +33,22 @@ o2physics_add_dpl_workflow(diff-mcqa
                   SOURCES diffMCQA.cxx
                   PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
                   COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(upc-forward-run3
+                  SOURCES upcForwardRun3.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
+                  COMPONENT_NAME Analysis)
+o2physics_add_dpl_workflow(upc-forward-run3-analyzer
+                  SOURCES upcForwardRun3Analyzer.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
+                  COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(upc-forward-run3-producer
+                  SOURCES upcForwardRun3Producer.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
+                  COMPONENT_NAME Analysis)
+
+#o2physics_add_dpl_workflow(upc-forward-run3-mc
+#                  SOURCES upcForwardRun3MC.cxx
+#                  PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsBase O2::DetectorsVertexing
+#                  COMPONENT_NAME Analysis)
