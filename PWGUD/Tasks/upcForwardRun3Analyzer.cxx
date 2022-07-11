@@ -108,7 +108,7 @@ struct UPCForwardRun3Analyzer {
         return;
     }
 
-    p1.SetPtEtaPhiM(trackMuon.pt1(),trackMuon.eta1(),trackMuon.phi1(),mmuon);
+    p1.SetPtEtaPhiM(trackMuon.pt1(),trackMuon.eta1(),trackMuon.phi1(),mmuon);  
     p2.SetPtEtaPhiM(trackMuon.pt2(),trackMuon.eta2(),trackMuon.phi2(),mmuon);
 
     p = p1+p2;
