@@ -24,7 +24,7 @@ using namespace o2::framework;
 using namespace o2::framework::expressions;
 
 struct ALICE3Centrality {
-  Produces<aod::CentV0Ms> cent;
+  Produces<aod::CentRun2V0Ms> cent;
   Service<o2::ccdb::BasicCCDBManager> ccdb;
 
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
@@ -48,7 +48,7 @@ struct ALICE3Centrality {
   }
 
   int nevs = 0;
-  void process(const o2::aod::Collision& collision, const soa::Join<aod::Tracks, aod::TracksExtended>& tracks)
+  void process(const o2::aod::Collision& collision, const soa::Join<aod::Tracks, aod::TracksDCA>& tracks)
   {
     TH1D* hCumMultALICE3 = ccdb->getForTimeStamp<TH1D>("Analysis/ALICE3/Centrality", -1);
     if (!hCumMultALICE3) {

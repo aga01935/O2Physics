@@ -15,7 +15,7 @@
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/ASoAHelpers.h"
-//FK #include "Common/Core/PID/PIDResponse.h"
+//FK #include "Common/DataModel/PIDResponse.h"
 
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/TrackSelectionTables.h"
@@ -74,7 +74,7 @@ struct jetFilter {
 
   //declare filters on tracks and charged jets
   Filter collisionFilter = nabs(aod::collision::posZ) < cfgVertexCut;
-  Filter trackFilter = (nabs(aod::track::eta) < cfgTrackEtaCut) && (aod::track::isGlobalTrack == (uint8_t) true) && (aod::track::pt > cfgTrackLowPtCut);
+  Filter trackFilter = (nabs(aod::track::eta) < cfgTrackEtaCut) && (requireGlobalTrackInFilter()) && (aod::track::pt > cfgTrackLowPtCut);
   Filter jetChFilter = (nabs(aod::jet::eta) < cfgJetChEtaCut);
 
   using TrackCandidates = soa::Filtered<soa::Join<aod::Tracks, aod::TrackSelection>>;

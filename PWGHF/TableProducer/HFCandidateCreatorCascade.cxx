@@ -27,7 +27,7 @@ using namespace o2::aod::hf_cand_prong2;
 
 void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 {
-  ConfigParamSpec optionDoMC{"doMC", VariantType::Bool, true, {"Perform MC matching."}};
+  ConfigParamSpec optionDoMC{"doMC", VariantType::Bool, false, {"Perform MC matching."}};
   workflowOptions.push_back(optionDoMC);
 }
 
@@ -57,6 +57,7 @@ struct HFCandidateCreatorCascade {
   Configurable<double> minParamChange{"minParamChange", 1.e-3, "stop iterations if largest change of any X is smaller than this"};
   Configurable<double> minRelChi2Change{"minRelChi2Change", 0.9, "stop iterations is chi2/chi2old > this"};
   Configurable<bool> doValPlots{"doValPlots", true, "do validation plots"};
+  Configurable<bool> silenceV0DataWarning{"silenceV0DataWarning", false, "do not print a warning for not found V0s and silently skip them"};
 
   // for debugging
 #ifdef MY_DEBUG
@@ -76,7 +77,7 @@ struct HFCandidateCreatorCascade {
   double mass2K0sP{0.};
 
   void process(aod::Collisions const&,
-               aod::HfCascade const& rowsTrackIndexCasc,
+               aod::HfCascades const& rowsTrackIndexCasc,
                MyBigTracks const&,
                aod::V0sLinked const&,
                aod::V0Datas const&
@@ -100,10 +101,18 @@ struct HFCandidateCreatorCascade {
     for (const auto& casc : rowsTrackIndexCasc) {
 
       const auto& bach = casc.index0_as<MyBigTracks>();
-      if (!casc.v0_as<aod::V0sLinked>().has_v0Data()) {
-        LOGF(warning, "V0Data not there for V0 %d in HF cascade %d. Skipping candidate.", casc.v0Id(), casc.globalIndex());
+      LOGF(debug, "V0 %d in HF cascade %d.", casc.v0Id(), casc.globalIndex());
+      if (!casc.has_v0()) {
+        LOGF(error, "V0 not there for HF cascade %d. Skipping candidate.", casc.globalIndex());
         continue;
       }
+      if (!casc.v0_as<aod::V0sLinked>().has_v0Data()) {
+        if (!silenceV0DataWarning) {
+          LOGF(warning, "V0Data not there for V0 %d in HF cascade %d. Skipping candidate.", casc.v0Id(), casc.globalIndex());
+        }
+        continue;
+      }
+      LOGF(debug, "V0Data ID: %d", casc.v0_as<aod::V0sLinked>().v0DataId());
       const auto& v0 = casc.v0_as<aod::V0sLinked>().v0Data();
       const auto& trackV0DaughPos = v0.posTrack_as<MyBigTracks>();
       const auto& trackV0DaughNeg = v0.negTrack_as<MyBigTracks>();
@@ -118,8 +127,8 @@ struct HFCandidateCreatorCascade {
       MY_DEBUG_MSG(isLc, LOG(info) << "Processing the Lc with proton " << indexBach << " trackV0DaughPos " << indexV0DaughPos << " trackV0DaughNeg " << indexV0DaughNeg);
 
       auto trackParCovBach = getTrackParCov(bach);
-      auto trackParCovV0DaughPos = getTrackParCov(trackV0DaughPos); // check that MyBigTracks does not need TracksExtended!
-      auto trackParCovV0DaughNeg = getTrackParCov(trackV0DaughNeg); // check that MyBigTracks does not need TracksExtended!
+      auto trackParCovV0DaughPos = getTrackParCov(trackV0DaughPos); // check that MyBigTracks does not need TracksDCA!
+      auto trackParCovV0DaughNeg = getTrackParCov(trackV0DaughNeg); // check that MyBigTracks does not need TracksDCA!
       trackParCovV0DaughPos.propagateTo(v0.posX(), bZ);             // propagate the track to the X closest to the V0 vertex
       trackParCovV0DaughNeg.propagateTo(v0.negX(), bZ);             // propagate the track to the X closest to the V0 vertex
       const std::array<float, 3> vertexV0 = {v0.x(), v0.y(), v0.z()};
@@ -194,7 +203,7 @@ struct HFCandidateCreatorCascade {
       // fill histograms
       if (doValPlots) {
         // calculate invariant masses
-        mass2K0sP = RecoDecay::M(array{pVecBach, pVecV0}, array{massP, massK0s});
+        mass2K0sP = RecoDecay::m(array{pVecBach, pVecV0}, array{massP, massK0s});
         hmass2->Fill(mass2K0sP);
       }
     }
@@ -275,7 +284,7 @@ struct HFCandidateCreatorCascadeMC {
         MY_DEBUG_MSG(sign, LOG(info) << "Lc in K0S p");
         arrDaughLcIndex.clear();
         // checking that the final daughters (decay depth = 3) are p, pi+, pi-
-        RecoDecay::getDaughters(particlesMC, particle, &arrDaughLcIndex, arrDaughLcPDGRef, 3); // best would be to check the K0S daughters
+        RecoDecay::getDaughters(particle, &arrDaughLcIndex, arrDaughLcPDGRef, 3); // best would be to check the K0S daughters
         if (arrDaughLcIndex.size() == 3) {
           for (std::size_t iProng = 0; iProng < arrDaughLcIndex.size(); ++iProng) {
             auto daughI = particlesMC.rawIteratorAt(arrDaughLcIndex[iProng]);

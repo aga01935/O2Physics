@@ -81,6 +81,26 @@ void o2::aod::dqhistograms::DefineHistograms(HistogramManager* hm, const char* h
       hm->AddHistogram(histClass, "MCVtxZ", "Vtx Z (MC)", false, 75, -15.0, 15.0, VarManager::kMCVtxZ);
       hm->AddHistogram(histClass, "MCImpPar_CentVZERO", "MC impact param vs CentVZERO", false, 50, 0.0, 100.0, VarManager::kCentVZERO, 20, 0.0, 20.0, VarManager::kMCEventImpParam);
     }
+    if (subGroupStr.Contains("qvector")) {
+      hm->AddHistogram(histClass, "Q2X0A", "Q2X0A ", false, 100, -1.0, 1.0, VarManager::kQ2X0A);
+      hm->AddHistogram(histClass, "Q2Y0A", "Q2Y0A ", false, 100, -1.0, 1.0, VarManager::kQ2Y0A);
+      hm->AddHistogram(histClass, "Q2X0B", "Q2X0B ", false, 100, -1.0, 1.0, VarManager::kQ2X0B);
+      hm->AddHistogram(histClass, "Q2Y0B", "Q2Y0B ", false, 100, -1.0, 1.0, VarManager::kQ2Y0B);
+      hm->AddHistogram(histClass, "Q2X0C", "Q2X0C ", false, 100, -1.0, 1.0, VarManager::kQ2X0C);
+      hm->AddHistogram(histClass, "Q2Y0C", "Q2Y0C ", false, 100, -1.0, 1.0, VarManager::kQ2Y0C);
+      hm->AddHistogram(histClass, "Q2X0A_VtxZ", "Q2X0A vs VtxZ", true, 60, -15.0, 15.0, VarManager::kVtxZ, 100, -1.0, 1.0, VarManager::kQ2X0A);
+      hm->AddHistogram(histClass, "Q2Y0A_VtxZ", "Q2Y0A vs VtxZ", true, 60, -15.0, 15.0, VarManager::kVtxZ, 100, -1.0, 1.0, VarManager::kQ2Y0A);
+      hm->AddHistogram(histClass, "Q2X0B_VtxZ", "Q2X0B vs VtxZ", true, 60, -15.0, 15.0, VarManager::kVtxZ, 100, -1.0, 1.0, VarManager::kQ2X0B);
+      hm->AddHistogram(histClass, "Q2Y0B_VtxZ", "Q2Y0B vs VtxZ", true, 60, -15.0, 15.0, VarManager::kVtxZ, 100, -1.0, 1.0, VarManager::kQ2Y0B);
+      hm->AddHistogram(histClass, "Q2X0C_VtxZ", "Q2X0C vs VtxZ", true, 60, -15.0, 15.0, VarManager::kVtxZ, 100, -1.0, 1.0, VarManager::kQ2X0C);
+      hm->AddHistogram(histClass, "Q2Y0C_VtxZ", "Q2Y0C vs VtxZ", true, 60, -15.0, 15.0, VarManager::kVtxZ, 100, -1.0, 1.0, VarManager::kQ2Y0C);
+      hm->AddHistogram(histClass, "Q2X0A_Cent", "Q2X0A vs Cent", true, 90, 0.0, 90.0, VarManager::kCentVZERO, 100, -1.0, 1.0, VarManager::kQ2X0A);
+      hm->AddHistogram(histClass, "Q2Y0A_Cent", "Q2Y0A vs Cent", true, 90, 0.0, 90.0, VarManager::kCentVZERO, 100, -1.0, 1.0, VarManager::kQ2Y0A);
+      hm->AddHistogram(histClass, "Q2X0B_Cent", "Q2X0B vs Cent", true, 90, 0.0, 90.0, VarManager::kCentVZERO, 100, -1.0, 1.0, VarManager::kQ2X0B);
+      hm->AddHistogram(histClass, "Q2Y0B_Cent", "Q2Y0B vs Cent", true, 90, 0.0, 90.0, VarManager::kCentVZERO, 100, -1.0, 1.0, VarManager::kQ2Y0B);
+      hm->AddHistogram(histClass, "Q2X0C_Cent", "Q2X0C vs Cent", true, 90, 0.0, 90.0, VarManager::kCentVZERO, 100, -1.0, 1.0, VarManager::kQ2X0C);
+      hm->AddHistogram(histClass, "Q2Y0C_Cent", "Q2Y0C vs Cent", true, 90, 0.0, 90.0, VarManager::kCentVZERO, 100, -1.0, 1.0, VarManager::kQ2Y0C);
+    }
   }
 
   if (groupStr.Contains("track")) {
@@ -129,8 +149,8 @@ void o2::aod::dqhistograms::DefineHistograms(HistogramManager* hm, const char* h
       hm->AddHistogram(histClass, "TOFnSigEle_pIN", "TOF n-#sigma(e) vs pIN", false, 200, 0.0, 10.0, VarManager::kPin, 100, -5.0, 5.0, VarManager::kTOFnSigmaEl);
     }
     if (subGroupStr.Contains("dca")) {
-      hm->AddHistogram(histClass, "DCAxy", "DCA_{xy}", false, 100, -3.0, 3.0, VarManager::kTrackDCAxy);
-      hm->AddHistogram(histClass, "DCAz", "DCA_{z}", false, 100, -5.0, 5.0, VarManager::kTrackDCAz);
+      hm->AddHistogram(histClass, "DCAxy", "DCA_{xy}", false, 200, -1.0, 1.0, VarManager::kTrackDCAxy);
+      hm->AddHistogram(histClass, "DCAz", "DCA_{z}", false, 200, -1.0, 1.0, VarManager::kTrackDCAz);
       hm->AddHistogram(histClass, "DCAsigXY", "DCA_{XY} [#sigma]", false, 100, -10.0, 10.0, VarManager::kTrackDCAsigXY);
       hm->AddHistogram(histClass, "DCAsigZ", "DCA_{Z} [#sigma]", false, 100, -10.0, 10.0, VarManager::kTrackDCAsigZ);
       hm->AddHistogram(histClass, "Pt_DCAsigXY", "p_{T} vs DCA_{XY} [#sigma]", false, 200, 0.0, 20.0, VarManager::kPt, 100, -10.0, 10.0, VarManager::kTrackDCAsigXY); // JJ:edit

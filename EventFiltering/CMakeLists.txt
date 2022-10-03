@@ -15,27 +15,33 @@ o2physics_add_dpl_workflow(central-event-filter-task
                            COMPONENT_NAME Analysis
                            PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore)
 
+o2physics_add_dpl_workflow(selected-bc-range-task
+                           SOURCES selectBCRange.cxx
+                           COMPONENT_NAME Analysis
+                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+                           COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(nuclei-filter
                            SOURCES PWGLF/nucleiFilter.cxx
                            PUBLIC_LINK_LIBRARIES O2::Framework O2::DetectorsBase O2Physics::AnalysisCore
                            COMPONENT_NAME Analysis)
 
-o2physics_add_library(CutHolder
-                      SOURCES PWGUD/cutHolder.cxx
+o2physics_add_library(DGCutparHolder
+                      SOURCES PWGUD/DGCutparHolder.cxx
                       PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore)
 
-o2physics_target_root_dictionary(CutHolder
-                                 HEADERS PWGUD/cutHolder.h
-                                 LINKDEF PWGUD/CutHolderLinkDef.h)
+o2physics_target_root_dictionary(DGCutparHolder
+                                 HEADERS PWGUD/DGCutparHolder.h
+                                 LINKDEF PWGUD/DGCutparHolderLinkDef.h)
 
 o2physics_add_dpl_workflow(diffraction-filter
                            SOURCES PWGUD/diffractionFilter.cxx
-                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::CutHolder
+                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::DGCutparHolder
                            COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(hf-filter
                            SOURCES PWGHF/HFFilter.cxx
-                           PUBLIC_LINK_LIBRARIES O2::Framework O2::DetectorsBase O2Physics::AnalysisCore O2::DetectorsVertexing ONNXRuntime::ONNXRuntime
+                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsVertexing ONNXRuntime::ONNXRuntime
                            COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(cf-threebodyfemto-filter
@@ -56,4 +62,9 @@ o2physics_add_dpl_workflow(lf-strangeness-filter
 o2physics_add_dpl_workflow(mult-filter
                            SOURCES PWGMM/multFilter.cxx
                            PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+                           COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(hf-filter-qc
+                           SOURCES PWGHF/HFFilterQC.cxx
+                           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::DetectorsVertexing
                            COMPONENT_NAME Analysis)

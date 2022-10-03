@@ -10,7 +10,7 @@
 // or submit itself to any jurisdiction.
 /*
 I ran this code using following:
-o2-analysis-timestamp| o2-analysis-upc-forward | o2-analysis-event-selection  --aod-file <path to ao2d.txt> [--isPbPb] -b
+o2-analysis-event-selection|o2-analysis-timestamp| o2-analysis-upc-forward --aod-file <path to ao2d.txt> [--isPbPb] -b
 for now AO2D.root I am using is
 alien:///alice/data/2015/LHC15o/000246392/pass5_lowIR/PWGZZ/Run3_Conversion/148_20210304-0829_child_1/AOD/001/AO2D.root
 */
@@ -30,23 +30,54 @@ using namespace o2;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
 #define mmuon 0.1057 // mass of muon
+
+// some table definition for skimmed Data
+namespace o2::aod
+{
+
+namespace udfwdtrack
+{
+DECLARE_SOA_COLUMN(Pt1, pt1, float);
+DECLARE_SOA_COLUMN(Eta1, eta1, float);
+DECLARE_SOA_COLUMN(Phi1, phi1, float);
+DECLARE_SOA_COLUMN(Sign1, sign1, float);
+DECLARE_SOA_COLUMN(Pt2, pt2, float);
+DECLARE_SOA_COLUMN(Eta2, eta2, float);
+DECLARE_SOA_COLUMN(Phi2, phi2, float);
+DECLARE_SOA_COLUMN(Sign2, sign2, float);
+
+} // namespace udfwdtrack
+DECLARE_SOA_TABLE(UDFWDTracks, "AOD", "UDFWDTRACK", o2::soa::Index<>,
+                  udfwdtrack::Pt1, udfwdtrack::Eta1, udfwdtrack::Phi1,
+                  udfwdtrack::Sign1,
+                  udfwdtrack::Pt2, udfwdtrack::Eta2, udfwdtrack::Phi2,
+                  udfwdtrack::Sign2);
+using UDFWDTrack = UDFWDTracks::iterator;
+
+} // namespace o2::aod
+
+
+// end of table definition
+
+
 struct UPCForward {
   // defining histograms using histogram registry
   HistogramRegistry registry{"registry", {}, OutputObjHandlingPolicy::AnalysisObject};
+  Produces<aod::UDFWDTracks> fwdTracks;
 
   void init(o2::framework::InitContext&)
   {
 
     auto hSelectionCounter = registry.add<TH1>("hSelectionCounter", "hSelectionCounter;;NEvents", HistType::kTH1I, {{30, 0., 30.}});
 
-    // THIS IS THE SELECTION CUTS FOR NOW. We will add further cuts
-    TString SelectionCuts[8] = {"NoSelection", "CMup11and10Trigger", "V0Selection", "FDSelection", "twotracks", "oppositecharge", "-2.5<Eta<-4", "Pt<1"};
-    // now we can set BinLabel in histogram Registry
-    for (int i = 0; i < 6; i++) {
-      hSelectionCounter->GetXaxis()->SetBinLabel(i + 1, SelectionCuts[i].Data());
-    }
+  // THIS IS THE SELECTION CUTS FOR NOW. We will add further cuts
+  //  TString SelectionCuts[8] = {"NoSelection", "CMup11and10Trigger", "V0Selection", "FDSelection", "twotracks", "oppositecharge", "-2.5<Eta<-4", "Pt<1"};
+  // now we can set BinLabel in histogram Registry
+  //  for (int i = 0; i < 6; i++) {
+  //    hSelectionCounter->GetXaxis()->SetBinLabel(i + 1, SelectionCuts[i].Data());
+  //  }
 
-    registry.add("hMass", "Mass of Mother;#it{m_{#mu#mu}}, GeV/c^{2};", kTH1D, {{500, 0., 10.}});
+    /*registry.add("hMass", "Mass of Mother;#it{m_{#mu#mu}}, GeV/c^{2};", kTH1D, {{500, 0., 10.}});
     registry.add("hPt", "Pt of Mother;#it{p_{t}}, GeV/c;", kTH1D, {{500, 0., 5.}});
     registry.add("hPtsingle_muons", "Pt of Daughters;#it{p_{t}}, GeV/c;", kTH1D, {{500, 0., 5.}});
     registry.add("hPx", "Px;#it{P_{x}}, GeV/c;", kTH1D, {{500, -5., 5.}});
@@ -55,99 +86,81 @@ struct UPCForward {
     registry.add("hRap", "Rapidity of Mother;#it{y};", kTH1D, {{500, -10., 10.}});
     registry.add("hEta", "Eta;#it{#eta};", kTH1D, {{500, -10., 10.}});
     registry.add("hCharge", "Charge;#it{charge};", kTH1D, {{500, -10., 10.}});
-    registry.add("hPhi", "Phi;#it{#Phi};", kTH1D, {{500, -6., 6.}});
-
-    Configurable<float> etalow{"etalow", -4.0f, ""};   //
-    Configurable<float> etahigh{"etahigh", -2.5f, ""}; //
-    Filter etaFilter = (aod::fwdtrack::eta > etalow) && (aod::fwdtrack::eta < etahigh);
+    registry.add("hPhi", "Phi;#it{#Phi};", kTH1D, {{500, -6., 6.}});*/
   }
+  //Configurable<float> etalow{"etalow", -4.0f, ""};   //
+  //Configurable<float> etahigh{"etahigh", -2.5f, ""}; //
+  //Filter etaFilter = (aod::fwdtrack::eta > etalow) && (aod::fwdtrack::eta < etahigh);
+  //int triggeradd=0;
   // new
-  void process(soa::Join<aod::BCs, aod::Run2BCInfos, aod::BcSels>::iterator const& bc, soa::Filtered<aod::FwdTracks> const& tracksMuon)
+
+  //void process(soa::Join <aod::BcSels,aod::BCs>::iterator const& bc, aod::FwdTracks const& tracksMuon)
+  void process(soa::Join <aod::Collisions, aod::EvSels> const& collision, aod::FwdTracks const& tracksMuon)
   {
+      registry.fill(HIST("hSelectionCounter"), 0);
+      //bool iskMUP11fired =  bc.alias()[kMUP11];
+      //bool iskMUP10fired =  bc.alias()[kMUP10];
+      //cout << iskMUP10fired<< "....." << iskMUP11fired<< endl;
 
-    registry.fill(HIST("hSelectionCounter"), 0);
+      //if(iskMUP10fired || iskMUP11fired) {
+      //  triggeradd++;
+      //}
+      //cout << "number of triggers is "<< triggeradd<<endl;
+      //if(!iskMUP10fired && !iskMUP11fired) return;
+      //registry.fill(HIST("hSelectionCounter"), 1);
+      // V0 and FD information
+      //bool isBeamBeamV0A = bc.bbV0A();
+    //  bool isBeamGasV0A = bc.bgV0A();
+      // bool isBeamBeamV0C = bc.bbV0C();
+    //  bool isBeamGasV0C = bc.bgV0C();
 
-    int iMuonTracknumber = 0;
-    TLorentzVector p1, p2, p;
-    bool ispositive = kFALSE;
-    bool isnegative = kFALSE;
+      //bool isBeamBeamFDA = bc.bbFDA();
+      //bool isBeamGasFDA = bc.bgFDA();
+      //bool isBeamBeamFDC = bc.bbFDC();
+      //bool isBeamGasFDC = bc.bgFDC();
 
-    // V0 and FD information
-    bool isBeamBeamV0A = bc.bbV0A();
-    bool isBeamGasV0A = bc.bgV0A();
-    // bool isBeamBeamV0C = bc.bbV0C();
-    bool isBeamGasV0C = bc.bgV0C();
+      // offline V0 and FD selection
+      //bool isV0Selection = isBeamBeamV0A || isBeamGasV0A || isBeamGasV0C;
+      //bool isFDSelection = isBeamBeamFDA || isBeamGasFDA || isBeamBeamFDC || isBeamGasFDC;
 
-    bool isBeamBeamFDA = bc.bbFDA();
-    bool isBeamGasFDA = bc.bgFDA();
-    bool isBeamBeamFDC = bc.bbFDC();
-    bool isBeamGasFDC = bc.bgFDC();
+      //if(isV0Selection) return;
+      //registry.fill(HIST("hSelectionCounter"), 2);
 
-    // offline V0 and FD selection
-    bool isV0Selection = isBeamBeamV0A || isBeamGasV0A || isBeamGasV0C;
-    bool isFDSelection = isBeamBeamFDA || isBeamGasFDA || isBeamBeamFDC || isBeamGasFDC;
+      //if(isFDSelection) return;
+      //registry.fill(HIST("hSelectionCounter"), 3);
+      int ntracks = 0;
 
-    // CCUP10 and CCUP11 information
-    bool iskMUP11fired = bc.alias()[kMUP11];
-    bool iskMUP10fired = bc.alias()[kMUP10];
-    // cout << iskMUP11fired << iskMUP10fired<< endl;
-    //  selecting kMUP10 and 11 triggers
-    if (!iskMUP11fired && !iskMUP10fired) {
-      return;
-    }
-    registry.fill(HIST("hSelectionCounter"), 1);
+      TLorentzVector fwdtrack1, fwdtrack2;
+      //int fwdtrack1sign;
+      //int fwdtrack2sign;
 
-    if (isV0Selection) {
-      return;
-    }
-    registry.fill(HIST("hSelectionCounter"), 2);
+      if (tracksMuon.size()!=2)return;
+      cout <<"there are two tracks events"<< tracksMuon.size()<<endl;
+      registry.fill(HIST("hSelectionCounter"), 4);
 
-    if (isFDSelection) {
-      return;
-    }
-    registry.fill(HIST("hSelectionCounter"), 3);
+      //cout << "number of track is " << tracksMuon.size()<< endl;
+      for (auto& muon : tracksMuon) {
+          ntracks++;
+      //  if (ntracks>2) continue; //selecting two tracks event
+         //auto muon1 = muon.begin();
+         //auto muon2 = muon1+1;
+         //string s = typeid(muon).name();
+         cout <<"##########"<< muon.index()<< endl;
+        //fwdtrack1.SetXYZM(muon1.px(), muon1.py(), muon1.pz(), mmuon);
+        //fwdtrack2.SetXYZM(muon2.px(), muon2.py(), muon2.pz(), mmuon);
+        //fwdTracks(muon.pt());
 
-    for (auto& muon : tracksMuon) {
-      registry.fill(HIST("hCharge"), muon.sign());
-      iMuonTracknumber++;
 
-      if (muon.sign() > 0) {
-        p1.SetXYZM(muon.px(), muon.py(), muon.pz(), mmuon);
-        ispositive = kTRUE;
-      }
-      if (muon.sign() < 0) {
-        p2.SetXYZM(muon.px(), muon.py(), muon.pz(), mmuon);
-        isnegative = kTRUE;
-      }
-    }
-    if (iMuonTracknumber != 2) {
-      return;
-    }
+      } //muon iterate
+      cout << "number of tracks is "<<ntracks << endl;
 
-    registry.fill(HIST("hSelectionCounter"), 4);
-    if (!ispositive || !isnegative) {
-      return;
-    }
-    registry.fill(HIST("hSelectionCounter"), 5);
 
-    registry.fill(HIST("hSelectionCounter"), 6);
-    p = p1 + p2;
-    cout << "pt of dimuon " << p.Pt() << endl;
-    if (p.Pt() > 1) {
-      return;
-    }
-    registry.fill(HIST("hSelectionCounter"), 7);
-    registry.fill(HIST("hPt"), p.Pt());
-    registry.fill(HIST("hPx"), p.Px());
-    registry.fill(HIST("hPy"), p.Py());
-    registry.fill(HIST("hPz"), p.Pz());
-    registry.fill(HIST("hRap"), p.Rapidity());
-    registry.fill(HIST("hMass"), p.M());
-    registry.fill(HIST("hPhi"), p.Phi());
-    registry.fill(HIST("hEta"), p1.Eta());
-    registry.fill(HIST("hEta"), p2.Eta());
-    registry.fill(HIST("hPtsingle_muons"), p1.Pt());
-    registry.fill(HIST("hPtsingle_muons"), p2.Pt());
+
+      //if (ntracks!=2) return; // selecting two tracks event
+
+      //fwdTracks(fwdtrack1.pt(), fwdtrack1.eta(), fwdtrack1.phi(),fwdtrack1.M(),fwdtrack1sign, fwdtrack2.pt(), fwdtrack2.eta(), fwdtrack2.phi(), fwdtrack2.M(),fwdtrack2sign);
+
+
 
   } // end of process
 

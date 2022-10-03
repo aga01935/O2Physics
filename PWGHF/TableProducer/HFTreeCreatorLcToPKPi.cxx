@@ -184,6 +184,8 @@ struct CandidateTreeWriter {
   {
   }
 
+  Configurable<double> downSampleBkgFactor{"downSampleBkgFactor", 1., "Fraction of candidates to store in the tree"};
+
   void processMC(aod::Collisions const& collisions,
                  aod::McCollisions const& mccollisions,
                  soa::Join<aod::HfCandProng3, aod::HfCandProng3MCRec, aod::HFSelLcCandidate> const& candidates,
@@ -216,7 +218,8 @@ struct CandidateTreeWriter {
                            float FunctionCt,
                            float FunctionY,
                            float FunctionE) {
-        if (FunctionSelection >= 1) {
+        double pseudoRndm = trackPos1.pt() * 1000. - (long)(trackPos1.pt() * 1000);
+        if (FunctionSelection >= 1 && std::abs(candidate.flagMCMatchRec()) == 1 << DecayType::LcToPKPi && pseudoRndm < downSampleBkgFactor) {
           rowCandidateFull(
             trackPos1.collision().bcId(),
             trackPos1.collision().numContrib(),
@@ -236,13 +239,13 @@ struct CandidateTreeWriter {
             candidate.decayLengthXYNormalised(),
             candidate.impactParameterNormalised0(),
             candidate.ptProng0(),
-            RecoDecay::P(candidate.pxProng0(), candidate.pyProng0(), candidate.pzProng0()),
+            RecoDecay::p(candidate.pxProng0(), candidate.pyProng0(), candidate.pzProng0()),
             candidate.impactParameterNormalised1(),
             candidate.ptProng1(),
-            RecoDecay::P(candidate.pxProng1(), candidate.pyProng1(), candidate.pzProng1()),
+            RecoDecay::p(candidate.pxProng1(), candidate.pyProng1(), candidate.pzProng1()),
             candidate.impactParameterNormalised2(),
             candidate.ptProng2(),
-            RecoDecay::P(candidate.pxProng2(), candidate.pyProng2(), candidate.pzProng2()),
+            RecoDecay::p(candidate.pxProng2(), candidate.pyProng2(), candidate.pzProng2()),
             candidate.pxProng0(),
             candidate.pyProng0(),
             candidate.pzProng0(),
@@ -305,7 +308,7 @@ struct CandidateTreeWriter {
           particle.pt(),
           particle.eta(),
           particle.phi(),
-          RecoDecay::Y(array{particle.px(), particle.py(), particle.pz()}, RecoDecay::getMassPDG(particle.pdgCode())),
+          RecoDecay::y(array{particle.px(), particle.py(), particle.pz()}, RecoDecay::getMassPDG(particle.pdgCode())),
           particle.flagMCMatchGen());
       }
     }
@@ -342,7 +345,8 @@ struct CandidateTreeWriter {
                            float FunctionCt,
                            float FunctionY,
                            float FunctionE) {
-        if (FunctionSelection >= 1) {
+        double pseudoRndm = trackPos1.pt() * 1000. - (long)(trackPos1.pt() * 1000);
+        if (FunctionSelection >= 1 && pseudoRndm < downSampleBkgFactor) {
           rowCandidateFull(
             trackPos1.collision().bcId(),
             trackPos1.collision().numContrib(),
@@ -362,13 +366,13 @@ struct CandidateTreeWriter {
             candidate.decayLengthXYNormalised(),
             candidate.impactParameterNormalised0(),
             candidate.ptProng0(),
-            RecoDecay::P(candidate.pxProng0(), candidate.pyProng0(), candidate.pzProng0()),
+            RecoDecay::p(candidate.pxProng0(), candidate.pyProng0(), candidate.pzProng0()),
             candidate.impactParameterNormalised1(),
             candidate.ptProng1(),
-            RecoDecay::P(candidate.pxProng1(), candidate.pyProng1(), candidate.pzProng1()),
+            RecoDecay::p(candidate.pxProng1(), candidate.pyProng1(), candidate.pzProng1()),
             candidate.impactParameterNormalised2(),
             candidate.ptProng2(),
-            RecoDecay::P(candidate.pxProng2(), candidate.pyProng2(), candidate.pzProng2()),
+            RecoDecay::p(candidate.pxProng2(), candidate.pyProng2(), candidate.pzProng2()),
             candidate.pxProng0(),
             candidate.pyProng0(),
             candidate.pzProng0(),

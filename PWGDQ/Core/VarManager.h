@@ -85,7 +85,8 @@ class VarManager : public TObject
     ReducedMuonExtra = BIT(14),
     ReducedMuonCov = BIT(15),
     ParticleMC = BIT(16),
-    Pair = BIT(17) // TODO: check whether we really need the Pair member here
+    Pair = BIT(17), // TODO: check whether we really need the Pair member here
+    ReducedEventQvector = BIT(18)
   };
 
   enum PairCandidateType {
@@ -140,6 +141,15 @@ class VarManager : public TObject
     kMCEventTime,
     kMCEventWeight,
     kMCEventImpParam,
+    kQ2X0A, // q-vector (e.g. from TPC) with x component (harmonic 2 and power 0), sub-event A
+    kQ2Y0A, // q-vector (e.g. from TPC) with y component (harmonic 2 and power 0), sub-event A
+    kQ2X0B,
+    kQ2Y0B,
+    kQ2X0C,
+    kQ2Y0C,
+    kMultA, // Multiplicity of the sub-event A
+    kMultB,
+    kMultC,
     kNEventWiseVariables,
 
     // Basic track/muon/pair wise variables
@@ -205,6 +215,9 @@ class VarManager : public TObject
     kTOFnSigmaPi,
     kTOFnSigmaKa,
     kTOFnSigmaPr,
+    kTrackTimeResIsRange, // Gaussian or range (see Framework/DataTypes)
+    kPVContributor,       // This track has contributed to the collision vertex fit (see Framework/DataTypes)
+    kOrphanTrack,         // Track has no association with any collision vertex (see Framework/DataTypes)
     kIsLegFromGamma,
     kIsLegFromK0S,
     kIsLegFromLambda,
@@ -374,6 +387,8 @@ class VarManager : public TObject
   static void FillDileptonTrackVertexing(C const& collision, T1 const& lepton1, T1 const& lepton2, T1 const& track, float* values);
   template <typename T1, typename T2>
   static void FillDileptonHadron(T1 const& dilepton, T2 const& hadron, float* values = nullptr, float hadronMass = 0.0f);
+  template <typename C, typename A1, typename A2, typename A3>
+  static void FillQVectorFromGFW(C const& collision, A1 const& compA, A2 const& compB, A3 const& compC, float normA = 1.0, float normB = 1.0, float normC = 1.0, float* values = nullptr);
 
  public:
   VarManager();
@@ -487,7 +502,7 @@ void VarManager::FillEvent(T const& event, float* values)
   }
 
   if constexpr ((fillMap & CollisionCent) > 0) {
-    values[kCentVZERO] = event.centV0M();
+    values[kCentVZERO] = event.centRun2V0M();
   }
 
   // TODO: need to add EvSels and Cents tables, etc. in case of the central data model
@@ -503,7 +518,7 @@ void VarManager::FillEvent(T const& event, float* values)
   if constexpr ((fillMap & ReducedEventExtended) > 0) {
     values[kBC] = event.globalBC();
     values[kTimestamp] = event.timestamp();
-    values[kCentVZERO] = event.centV0M();
+    values[kCentVZERO] = event.centRun2V0M();
     if (fgUsedVars[kIsINT7]) {
       values[kIsINT7] = (event.triggerAlias() & (uint32_t(1) << kINT7)) > 0;
     }
@@ -611,13 +626,22 @@ void VarManager::FillTrack(T const& track, float* values)
   if constexpr ((fillMap & TrackExtra) > 0 || (fillMap & ReducedTrackBarrel) > 0) {
     values[kPin] = track.tpcInnerParam();
     if (fgUsedVars[kIsITSrefit]) {
-      values[kIsITSrefit] = (track.flags() & o2::aod::track::ITSrefit) > 0;
+      values[kIsITSrefit] = (track.flags() & o2::aod::track::ITSrefit) > 0; // NOTE: This is just for Run-2
+    }
+    if (fgUsedVars[kTrackTimeResIsRange]) {
+      values[kTrackTimeResIsRange] = (track.flags() & o2::aod::track::TrackTimeResIsRange) > 0; // NOTE: This is NOT for Run-2
     }
     if (fgUsedVars[kIsTPCrefit]) {
-      values[kIsTPCrefit] = (track.flags() & o2::aod::track::TPCrefit) > 0;
+      values[kIsTPCrefit] = (track.flags() & o2::aod::track::TPCrefit) > 0; // NOTE: This is just for Run-2
+    }
+    if (fgUsedVars[kPVContributor]) {
+      values[kPVContributor] = (track.flags() & o2::aod::track::PVContributor) > 0; // NOTE: This is NOT for Run-2
     }
     if (fgUsedVars[kIsGoldenChi2]) {
-      values[kIsGoldenChi2] = (track.flags() & o2::aod::track::GoldenChi2) > 0;
+      values[kIsGoldenChi2] = (track.flags() & o2::aod::track::GoldenChi2) > 0; // NOTE: This is just for Run-2
+    }
+    if (fgUsedVars[kOrphanTrack]) {
+      values[kOrphanTrack] = (track.flags() & o2::aod::track::OrphanTrack) > 0; // NOTE: This is NOT for Run-2
     }
     if (fgUsedVars[kIsSPDfirst]) {
       values[kIsSPDfirst] = (track.itsClusterMap() & uint8_t(1)) > 0;
@@ -649,7 +673,7 @@ void VarManager::FillTrack(T const& track, float* values)
       }
       values[kTrackDCAxy] = track.dcaXY();
       values[kTrackDCAz] = track.dcaZ();
-      if constexpr ((fillMap & TrackCov) > 0) {
+      if constexpr ((fillMap & ReducedTrackBarrelCov) > 0) {
         if (fgUsedVars[kTrackDCAsigXY]) {
           values[kTrackDCAsigXY] = track.dcaXY() / std::sqrt(track.cYY());
         }
@@ -1194,6 +1218,25 @@ void VarManager::FillDileptonTrackVertexing(C const& collision, T1 const& lepton
                                              (collision.posZ() - secondaryVertex[2]) * v123.Pz()) /
                                             (v123.P() * values[VarManager::kVertexingLxyz]);
   }
+}
+
+template <typename C, typename A1, typename A2, typename A3>
+void VarManager::FillQVectorFromGFW(C const& collision, A1 const& compA, A2 const& compB, A3 const& compC, float normA, float normB, float normC, float* values)
+{
+  if (!values) {
+    values = fgValues;
+  }
+
+  // Fill Q vector from generic flow framework for different eta gap A, B, C
+  values[kQ2X0A] = compA.Re() / normA;
+  values[kQ2Y0A] = compA.Im() / normA;
+  values[kQ2X0B] = compB.Re() / normB;
+  values[kQ2Y0B] = compB.Im() / normB;
+  values[kQ2X0C] = compC.Re() / normC;
+  values[kQ2Y0C] = compC.Im() / normC;
+  values[kMultA] = normA;
+  values[kMultB] = normB;
+  values[kMultC] = normC;
 }
 
 template <typename T1, typename T2>

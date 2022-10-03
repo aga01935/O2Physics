@@ -22,11 +22,10 @@
 #include "Framework/RunningWorkflowInfo.h"
 #include "Framework/Array2D.h"
 #include <CCDB/BasicCCDBManager.h>
-#include "Common/Core/PID/PIDResponse.h"
-#include "Common/Core/PID/PIDTOF.h"
 #include "Common/Core/PID/TPCPIDResponse.h"
 #include "Common/DataModel/Multiplicity.h"
 #include "Common/DataModel/TrackSelectionTables.h"
+#include "pidTOFBase.h"
 
 using namespace o2;
 using namespace o2::framework;
@@ -43,7 +42,7 @@ void customize(std::vector<o2::framework::ConfigParamSpec>& workflowOptions)
 #include "Framework/runDataProcessing.h"
 
 struct bayesPid {
-  using Trks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal>;
+  using Trks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TOFSignal, aod::TOFEvTime, aod::pidEvTimeFlags>;
   using Coll = soa::Join<aod::Collisions, aod::Mults>;
 
   // Tables to produce
@@ -517,7 +516,7 @@ struct bayesPidQa {
   static constexpr std::string_view hprob[Np] = {"probability/El", "probability/Mu", "probability/Pi",
                                                  "probability/Ka", "probability/Pr", "probability/De",
                                                  "probability/Tr", "probability/He", "probability/Al"};
-  HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::QAObject};
+  HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
 
   Configurable<int> logAxis{"logAxis", 1, "Flag to use a log momentum axis"};
   Configurable<int> nBinsP{"nBinsP", 400, "Number of bins for the momentum"};

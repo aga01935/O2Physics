@@ -35,7 +35,7 @@
 #include "PWGDQ/Core/CutsLibrary.h"
 #include "PWGDQ/Core/MCSignal.h"
 #include "PWGDQ/Core/MCSignalLibrary.h"
-#include "Common/Core/PID/PIDResponse.h"
+#include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "TList.h"
 #include <iostream>
@@ -48,13 +48,13 @@ using namespace o2::framework;
 using namespace o2::framework::expressions;
 using namespace o2::aod;
 
-using MyBarrelTracks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended, aod::TrackSelection,
+using MyBarrelTracks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection,
                                  aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                                  aod::pidTPCFullKa, aod::pidTPCFullPr,
                                  aod::pidTOFFullEl, aod::pidTOFFullMu, aod::pidTOFFullPi,
                                  aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFbeta,
                                  aod::McTrackLabels>;
-using MyBarrelTracksWithCov = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksCov, aod::TracksExtended, aod::TrackSelection,
+using MyBarrelTracksWithCov = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksCov, aod::TracksDCA, aod::TrackSelection,
                                         aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                                         aod::pidTPCFullKa, aod::pidTPCFullPr,
                                         aod::pidTOFFullEl, aod::pidTOFFullMu, aod::pidTOFFullPi,
@@ -63,7 +63,7 @@ using MyBarrelTracksWithCov = soa::Join<aod::Tracks, aod::TracksExtra, aod::Trac
 using MyMuons = soa::Join<aod::FwdTracks, aod::McFwdTrackLabels>;
 using MyMuonsWithCov = soa::Join<aod::FwdTracks, aod::FwdTracksCov, aod::McFwdTrackLabels>;
 using MyEvents = soa::Join<aod::Collisions, aod::EvSels, aod::McCollisionLabels>;
-using MyEventsWithCents = soa::Join<aod::Collisions, aod::EvSels, aod::CentV0Ms, aod::McCollisionLabels>;
+using MyEventsWithCents = soa::Join<aod::Collisions, aod::EvSels, aod::CentRun2V0Ms, aod::McCollisionLabels>;
 
 constexpr static uint32_t gkEventFillMap = VarManager::ObjTypes::BC | VarManager::ObjTypes::Collision;
 constexpr static uint32_t gkEventFillMapWithCent = VarManager::ObjTypes::BC | VarManager::ObjTypes::Collision | VarManager::ObjTypes::CollisionCent;
@@ -105,6 +105,8 @@ struct TableMakerMC {
   Configurable<std::string> fConfigMuonCuts{"cfgMuonCuts", "muonQualityCuts", "Comma separated list of muon cuts"};
   Configurable<float> fConfigBarrelTrackPtLow{"cfgBarrelLowPt", 1.0f, "Low pt cut for tracks in the barrel"};
   Configurable<float> fConfigMuonPtLow{"cfgMuonLowPt", 1.0f, "Low pt cut for muons"};
+  Configurable<float> fConfigMinTpcSignal{"cfgMinTpcSignal", 30.0, "Minimum TPC signal"};
+  Configurable<float> fConfigMaxTpcSignal{"cfgMaxTpcSignal", 300.0, "Maximum TPC signal"};
   Configurable<std::string> fConfigMCSignals{"cfgMCsignals", "", "Comma separated list of MC signals"};
   Configurable<bool> fIsRun2{"cfgIsRun2", false, "Whether we analyze Run-2 or Run-3 data"};
   Configurable<bool> fConfigNoQA{"cfgNoQA", false, "If true, no QA histograms"};
@@ -211,6 +213,10 @@ struct TableMakerMC {
     fOutputList.setObject(fHistMan->GetMainHistogramList());
   }
 
+  Preslice<aod::McParticles_001> perMcCollision = aod::mcparticle::mcCollisionId;
+  Preslice<MyBarrelTracks> perCollisionTracks = aod::track::collisionId;
+  Preslice<MyMuons> perCollisionMuons = aod::fwdtrack::collisionId;
+
   // Templated function instantianed for all of the process functions
   template <uint32_t TEventFillMap, uint32_t TTrackFillMap, uint32_t TMuonFillMap, typename TEvent, typename TTracks, typename TMuons>
   void fullSkimming(TEvent const& collisions, aod::BCs const& bcs, TTracks const& tracksBarrel, TMuons const& tracksMuon,
@@ -301,7 +307,7 @@ struct TableMakerMC {
       eventMClabels(fEventLabels.find(mcCollision.globalIndex())->second, collision.mcMask());
 
       // loop over the MC truth tracks and find those that need to be written
-      auto groupedMcTracks = mcTracks.sliceBy(aod::mcparticle::mcCollisionId, mcCollision.globalIndex());
+      auto groupedMcTracks = mcTracks.sliceBy(perMcCollision, mcCollision.globalIndex());
       for (auto& mctrack : groupedMcTracks) {
         // check all the requested MC signals and fill a decision bit map
         mcflags = 0;
@@ -347,7 +353,7 @@ struct TableMakerMC {
           trackBarrelCov.reserve(tracksBarrel.size());
         }
 
-        auto groupedTracks = tracksBarrel.sliceBy(aod::track::collisionId, collision.globalIndex());
+        auto groupedTracks = tracksBarrel.sliceBy(perCollisionTracks, collision.globalIndex());
         // loop over tracks
         for (auto& track : groupedTracks) {
           trackFilteringTag = uint64_t(0);
@@ -458,9 +464,52 @@ struct TableMakerMC {
         }
         muonLabels.reserve(tracksMuon.size()); // TODO: enable this once we have fwdtrack labels
 
-        auto groupedMuons = tracksMuon.sliceBy(aod::fwdtrack::collisionId, collision.globalIndex());
+        auto groupedMuons = tracksMuon.sliceBy(perCollisionMuons, collision.globalIndex());
         // loop over muons
+
+        // first we need to get the correct indices
+        int nDel = 0;
+        int idxPrev = -1;
+        std::map<int, int> newEntryNb;
+        std::map<int, int> newMatchIndex;
+
         for (auto& muon : groupedMuons) {
+          trackFilteringTag = uint64_t(0);
+          trackTempFilterMap = uint8_t(0);
+
+          if (!muon.has_mcParticle()) {
+            continue;
+          }
+
+          VarManager::FillTrack<TMuonFillMap>(muon);
+
+          if (muon.index() > idxPrev + 1) { // checks if some muons are filtered even before the skimming function
+            nDel += muon.index() - (idxPrev + 1);
+          }
+          idxPrev = muon.index();
+
+          // check the cuts and filters
+          int i = 0;
+          for (auto& cut : fMuonCuts) {
+            if (cut.IsSelected(VarManager::fgValues)) {
+              trackTempFilterMap |= (uint8_t(1) << i);
+              if (!fConfigNoQA) {
+                fHistMan->FillHistClass(Form("Muons_%s", cut.GetName()), VarManager::fgValues);
+              }
+              ((TH1I*)fStatsList->At(2))->Fill(float(i));
+            }
+            i++;
+          }
+          if (!trackTempFilterMap) { // does not pass the cuts
+            nDel++;
+          } else { // it passes the cuts and will be saved in the tables
+            newEntryNb[muon.index()] = muon.index() - nDel;
+          }
+        }
+
+        // now let's save the muons with the correct indices and matches
+        for (auto& muon : groupedMuons) {
+
           trackFilteringTag = uint64_t(0);
           trackTempFilterMap = uint8_t(0);
 
@@ -521,10 +570,33 @@ struct TableMakerMC {
             fCounters[0]++;
           }
 
+          // update the matching MCH/MFT index
+
+          if (int(muon.trackType()) == 0 || int(muon.trackType()) == 2) { // MCH-MFT or GLB track
+            int matchIdx = muon.matchMCHTrackId() - muon.offsets();
+            if (newEntryNb.count(matchIdx) > 0) {                                                  // if the key exists which means the match will not get deleted
+              newMatchIndex[muon.index()] = newEntryNb[matchIdx];                                  // update the match for this muon to the updated entry of the match
+              newMatchIndex[muon.index()] += muonBasic.lastIndex() + 1 - newEntryNb[muon.index()]; // adding the offset of muons, muonBasic.lastIndex() start at -1
+              if (int(muon.trackType()) == 0) {                                                    // for now only do this to global tracks
+                newMatchIndex[matchIdx] = newEntryNb[muon.index()];                                // add the  updated index of this muon as a match to mch track
+                newMatchIndex[matchIdx] += muonBasic.lastIndex() + 1 - newEntryNb[muon.index()];   // adding the offset, muonBasic.lastIndex() start at -1
+              }
+            } else {
+              newMatchIndex[muon.index()] = -1;
+            }
+          }
+
+          else if (int(muon.trackType() == 4)) { // an MCH track
+            // in this case the matches should be filled from the other types but we need to check
+            if (newMatchIndex.count(muon.index()) == 0) {
+              newMatchIndex[muon.index()] = -1;
+            }
+          }
+
           muonBasic(event.lastIndex(), trackFilteringTag, muon.pt(), muon.eta(), muon.phi(), muon.sign());
           muonExtra(muon.nClusters(), muon.pDca(), muon.rAtAbsorberEnd(),
                     muon.chi2(), muon.chi2MatchMCHMID(), muon.chi2MatchMCHMFT(),
-                    muon.matchScoreMCHMFT(), muon.matchMFTTrackId(), muon.matchMCHTrackId(), muon.mchBitMap(), muon.midBitMap(), muon.midBoards(), muon.trackType());
+                    muon.matchScoreMCHMFT(), newMatchIndex.find(muon.index())->second, muon.mchBitMap(), muon.midBitMap(), muon.midBoards(), muon.trackType());
           if constexpr (static_cast<bool>(TMuonFillMap & VarManager::ObjTypes::MuonCov)) {
             muonCov(muon.x(), muon.y(), muon.z(), muon.phi(), muon.tgl(), muon.signed1Pt(),
                     muon.cXX(), muon.cXY(), muon.cYY(), muon.cPhiX(), muon.cPhiY(), muon.cPhiPhi(),
@@ -755,6 +827,5 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
   // TODO: For now TableMakerMC works just for PbPb (cent table is present)
   //      Implement workflow arguments for pp/PbPb and possibly merge the task with tableMaker.cxx
   return WorkflowSpec{
-    adaptAnalysisTask<TableMakerMC>(cfgc)
-  };
+    adaptAnalysisTask<TableMakerMC>(cfgc)};
 }

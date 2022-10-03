@@ -230,7 +230,7 @@ struct HFCandidateCreatorX {
 
           // calculate invariant mass
           auto arrayMomenta = array{pvecJpsi, pvecPos, pvecNeg};
-          massJpsiPiPi = RecoDecay::M(std::move(arrayMomenta), array{massJpsi, massPi, massPi});
+          massJpsiPiPi = RecoDecay::m(std::move(arrayMomenta), array{massJpsi, massPi, massPi});
           if (jpsiCand.isSelJpsiToEE() > 0) {
             hMassXToJpsiToEEPiPi->Fill(massJpsiPiPi);
           }
@@ -255,7 +255,7 @@ struct HFCandidateCreatorXMC {
   Produces<aod::HfCandXMCGen> rowMCMatchGen;
 
   void process(aod::HfCandX const& candidates,
-               aod::HfCandProng2,
+               aod::HfCandProng2 const&,
                aod::BigTracksMC const& tracks,
                aod::McParticles const& particlesMC)
   {
@@ -323,7 +323,7 @@ struct HFCandidateCreatorXMC {
       if (RecoDecay::isMatchedMCGen(particlesMC, particle, pdgCodeX, array{pdgCodeJpsi, +kPiPlus, -kPiPlus}, true)) {
         // Match J/psi --> e+e-
         std::vector<int> arrDaughter;
-        RecoDecay::getDaughters(particlesMC, particle, &arrDaughter, array{pdgCodeJpsi}, 1);
+        RecoDecay::getDaughters(particle, &arrDaughter, array{pdgCodeJpsi}, 1);
         auto jpsiCandMC = particlesMC.rawIteratorAt(arrDaughter[0]);
         if (RecoDecay::isMatchedMCGen(particlesMC, jpsiCandMC, pdgCodeJpsi, array{+kElectron, -kElectron}, true)) {
           flag = 1 << hf_cand_x::DecayType::XToJpsiToEEPiPi;

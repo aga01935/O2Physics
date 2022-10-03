@@ -16,7 +16,7 @@
 #include "Common/DataModel/Centrality.h"
 #include "Common/Core/TrackSelection.h"
 #include "Common/Core/TrackSelectionDefaults.h"
-#include "Common/Core/PID/PIDResponse.h"
+#include "Common/DataModel/PIDResponse.h"
 #include "PWGCF/Core/AnalysisConfigurableCuts.h"
 #include "PWGCF/DataModel/DptDptFiltered.h"
 #include "Common/DataModel/TrackSelectionTables.h"
@@ -47,10 +47,10 @@ using namespace o2::analysis;
 
 namespace o2::analysis::dptdptfilter
 {
-using DptDptFullTracksPID = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended, aod::TrackSelection, aod::pidTPCEl, aod::pidTPCMu, aod::pidTPCPi, aod::pidTPCKa, aod::pidTPCPr, aod::pidTOFEl, aod::pidTOFMu, aod::pidTOFPi, aod::pidTOFKa, aod::pidTOFPr>;
-using DptDptFullTracksPIDDetLevel = soa::Join<aod::Tracks, aod::McTrackLabels, aod::TracksExtra, aod::TracksExtended, aod::TrackSelection, aod::pidTPCEl, aod::pidTPCMu, aod::pidTPCPi, aod::pidTPCKa, aod::pidTPCPr, aod::pidTOFEl, aod::pidTOFMu, aod::pidTOFPi, aod::pidTOFKa, aod::pidTOFPr>;
-using DptDptFullTracks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended, aod::TrackSelection>;
-using DptDptFullTracksDetLevel = soa::Join<aod::Tracks, aod::McTrackLabels, aod::TracksExtra, aod::TracksExtended, aod::TrackSelection>;
+using DptDptFullTracksPID = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection, aod::pidTPCEl, aod::pidTPCMu, aod::pidTPCPi, aod::pidTPCKa, aod::pidTPCPr, aod::pidTOFEl, aod::pidTOFMu, aod::pidTOFPi, aod::pidTOFKa, aod::pidTOFPr>;
+using DptDptFullTracksPIDDetLevel = soa::Join<aod::Tracks, aod::McTrackLabels, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection, aod::pidTPCEl, aod::pidTPCMu, aod::pidTPCPi, aod::pidTPCKa, aod::pidTPCPr, aod::pidTOFEl, aod::pidTOFMu, aod::pidTOFPi, aod::pidTOFKa, aod::pidTOFPr>;
+using DptDptFullTracks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection>;
+using DptDptFullTracksDetLevel = soa::Join<aod::Tracks, aod::McTrackLabels, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection>;
 
 /// \enum MatchRecoGenSpecies
 /// \brief The species considered by the matching tast
@@ -915,7 +915,7 @@ void DptDptFilter::processReconstructed(CollisionObject const& collision, Tracks
 
 void DptDptFilter::processWithCent(aod::CollisionEvSelCent const& collision, DptDptFullTracks const& ftracks)
 {
-  processReconstructed(collision, ftracks, collision.centV0M());
+  processReconstructed(collision, ftracks, collision.centRun2V0M());
 }
 
 void DptDptFilter::processWithoutCent(aod::CollisionEvSel const& collision, DptDptFullTracks const& ftracks)
@@ -925,7 +925,7 @@ void DptDptFilter::processWithoutCent(aod::CollisionEvSel const& collision, DptD
 
 void DptDptFilter::processWithCentPID(aod::CollisionEvSelCent const& collision, DptDptFullTracksPID const& ftracks)
 {
-  processReconstructed(collision, ftracks, collision.centV0M());
+  processReconstructed(collision, ftracks, collision.centRun2V0M());
 }
 
 void DptDptFilter::processWithoutCentPID(aod::CollisionEvSel const& collision, DptDptFullTracksPID const& ftracks)
@@ -935,7 +935,7 @@ void DptDptFilter::processWithoutCentPID(aod::CollisionEvSel const& collision, D
 
 void DptDptFilter::processWithCentDetectorLevel(aod::CollisionEvSelCent const& collision, DptDptFullTracksDetLevel const& ftracks, aod::McParticles const&)
 {
-  processReconstructed(collision, ftracks, collision.centV0M());
+  processReconstructed(collision, ftracks, collision.centRun2V0M());
 }
 
 void DptDptFilter::processWithoutCentDetectorLevel(aod::CollisionEvSel const& collision, DptDptFullTracksDetLevel const& ftracks, aod::McParticles const&)
@@ -945,7 +945,7 @@ void DptDptFilter::processWithoutCentDetectorLevel(aod::CollisionEvSel const& co
 
 void DptDptFilter::processWithCentPIDDetectorLevel(aod::CollisionEvSelCent const& collision, DptDptFullTracksPIDDetLevel const& ftracks, aod::McParticles const&)
 {
-  processReconstructed(collision, ftracks, collision.centV0M());
+  processReconstructed(collision, ftracks, collision.centRun2V0M());
 }
 
 void DptDptFilter::processWithoutCentPIDDetectorLevel(aod::CollisionEvSel const& collision, DptDptFullTracksPIDDetLevel const& ftracks, aod::McParticles const&)
@@ -996,7 +996,7 @@ void DptDptFilter::processWithCentGeneratorLevel(aod::McCollision const& mccolli
     if (tmpcollision.has_mcCollision()) {
       if (tmpcollision.mcCollisionId() == mccollision.globalIndex()) {
         aod::CollisionsEvSelCent::iterator const& collision = allcollisions.iteratorAt(tmpcollision.globalIndex());
-        float centmult = collision.centV0M();
+        float centmult = collision.centRun2V0M();
         if (IsEvtSelected(collision, centmult)) {
           fhTrueVertexZAA->Fill((mccollision.posZ()));
           processGenerated(mccollision, mcparticles, centmult);

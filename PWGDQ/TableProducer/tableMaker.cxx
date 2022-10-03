@@ -26,7 +26,7 @@
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/Centrality.h"
 #include "Common/CCDB/TriggerAliases.h"
-#include "Common/Core/PID/PIDResponse.h"
+#include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/TrackSelectionTables.h"
 #include "PWGDQ/DataModel/ReducedInfoTables.h"
 #include "PWGDQ/Core/VarManager.h"
@@ -45,24 +45,24 @@ using namespace o2::framework;
 using namespace o2::framework::expressions;
 using namespace o2::aod;
 
-using MyBarrelTracks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended, aod::TrackSelection,
+using MyBarrelTracks = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA, aod::TrackSelection,
                                  aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                                  aod::pidTPCFullKa, aod::pidTPCFullPr,
                                  aod::pidTOFFullEl, aod::pidTOFFullMu, aod::pidTOFFullPi,
                                  aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFbeta>;
-using MyBarrelTracksWithCov = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksCov, aod::TracksExtended, aod::TrackSelection,
+using MyBarrelTracksWithCov = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksCov, aod::TracksDCA, aod::TrackSelection,
                                         aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                                         aod::pidTPCFullKa, aod::pidTPCFullPr,
                                         aod::pidTOFFullEl, aod::pidTOFFullMu, aod::pidTOFFullPi,
                                         aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFbeta>;
-using MyBarrelTracksWithV0Bits = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksCov, aod::TracksExtended, aod::TrackSelection,
+using MyBarrelTracksWithV0Bits = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksCov, aod::TracksDCA, aod::TrackSelection,
                                            aod::pidTPCFullEl, aod::pidTPCFullMu, aod::pidTPCFullPi,
                                            aod::pidTPCFullKa, aod::pidTPCFullPr,
                                            aod::pidTOFFullEl, aod::pidTOFFullMu, aod::pidTOFFullPi,
                                            aod::pidTOFFullKa, aod::pidTOFFullPr, aod::pidTOFbeta, aod::V0Bits>;
 using MyEvents = soa::Join<aod::Collisions, aod::EvSels>;
 using MyEventsWithFilter = soa::Join<aod::Collisions, aod::EvSels, aod::DQEventFilter>;
-using MyEventsWithCent = soa::Join<aod::Collisions, aod::EvSels, aod::CentV0Ms>;
+using MyEventsWithCent = soa::Join<aod::Collisions, aod::EvSels, aod::CentRun2V0Ms>;
 using MyMuons = aod::FwdTracks;
 using MyMuonsWithCov = soa::Join<aod::FwdTracks, aod::FwdTracksCov>;
 
@@ -96,6 +96,8 @@ struct TableMaker {
   Configurable<std::string> fConfigMuonCuts{"cfgMuonCuts", "muonQualityCuts", "Comma separated list of muon cuts"};
   Configurable<float> fConfigBarrelTrackPtLow{"cfgBarrelLowPt", 1.0f, "Low pt cut for tracks in the barrel"};
   Configurable<float> fConfigMuonPtLow{"cfgMuonLowPt", 1.0f, "Low pt cut for muons"};
+  Configurable<float> fConfigMinTpcSignal{"cfgMinTpcSignal", 30.0, "Minimum TPC signal"};
+  Configurable<float> fConfigMaxTpcSignal{"cfgMaxTpcSignal", 300.0, "Maximum TPC signal"};
   Configurable<bool> fConfigNoQA{"cfgNoQA", false, "If true, no QA histograms"};
   Configurable<bool> fConfigDetailedQA{"cfgDetailedQA", false, "If true, include more QA histograms (BeforeCuts classes and more)"};
   Configurable<bool> fIsRun2{"cfgIsRun2", false, "Whether we analyze Run-2 or Run-3 data"};
@@ -105,7 +107,7 @@ struct TableMaker {
   std::vector<AnalysisCompositeCut> fMuonCuts;  //! Muon track cuts
 
   // TODO: filter on TPC dedx used temporarily until electron PID will be improved
-  Filter barrelSelectedTracks = ifnode(fIsRun2.node() == true, aod::track::trackType == uint8_t(aod::track::Run2Track), aod::track::trackType == uint8_t(aod::track::Track)) && o2::aod::track::pt >= fConfigBarrelTrackPtLow && nabs(o2::aod::track::eta) <= 0.9f && o2::aod::track::tpcSignal >= 70.0f && o2::aod::track::tpcSignal <= 100.0f && o2::aod::track::tpcChi2NCl < 4.0f && o2::aod::track::itsChi2NCl < 36.0f;
+  Filter barrelSelectedTracks = ifnode(fIsRun2.node() == true, aod::track::trackType == uint8_t(aod::track::Run2Track), aod::track::trackType == uint8_t(aod::track::Track)) && o2::aod::track::pt >= fConfigBarrelTrackPtLow && nabs(o2::aod::track::eta) <= 0.9f && o2::aod::track::tpcSignal >= fConfigMinTpcSignal && o2::aod::track::tpcSignal <= fConfigMaxTpcSignal && o2::aod::track::tpcChi2NCl < 4.0f && o2::aod::track::itsChi2NCl < 36.0f;
 
   Filter muonFilter = o2::aod::fwdtrack::pt >= fConfigMuonPtLow;
 
@@ -323,6 +325,37 @@ struct TableMaker {
         muonCov.reserve(tracksMuon.size());
       }
       // loop over muons
+
+      // first we need to get the correct indices
+      int nDel = 0;
+      int idxPrev = -1;
+      std::map<int, int> newEntryNb;
+      std::map<int, int> newMatchIndex;
+
+      for (auto& muon : tracksMuon) {
+        trackFilteringTag = uint64_t(0);
+        VarManager::FillTrack<TMuonFillMap>(muon);
+
+        if (muon.index() > idxPrev + 1) { // checks if some muons are filtered even before the skimming function
+          nDel += muon.index() - (idxPrev + 1);
+        }
+        idxPrev = muon.index();
+
+        // check the cuts and filters
+        int i = 0;
+        for (auto cut = fMuonCuts.begin(); cut != fMuonCuts.end(); cut++, i++) {
+          if ((*cut).IsSelected(VarManager::fgValues))
+            trackTempFilterMap |= (uint8_t(1) << i);
+        }
+
+        if (!trackTempFilterMap) { // does not pass the cuts
+          nDel++;
+        } else { // it passes the cuts and will be saved in the tables
+          newEntryNb[muon.index()] = muon.index() - nDel;
+        }
+      }
+
+      // now let's save the muons with the correct indices and matches
       for (auto& muon : tracksMuon) {
         trackFilteringTag = uint64_t(0);
         trackTempFilterMap = uint8_t(0);
@@ -348,10 +381,32 @@ struct TableMaker {
         // store the cut decisions
         trackFilteringTag |= uint64_t(trackTempFilterMap); // BIT0-7:  user selection cuts
 
+        // update the matching MCH/MFT index
+        if (int(muon.trackType()) == 0 || int(muon.trackType()) == 2) { // MCH-MFT(2) or GLB(0) track
+          int matchIdx = muon.matchMCHTrackId() - muon.offsets();
+          if (newEntryNb.count(matchIdx) > 0) {                                                  // if the key exists i.e the match will not get deleted
+            newMatchIndex[muon.index()] = newEntryNb[matchIdx];                                  // update the match for this muon to the updated entry of the match
+            newMatchIndex[muon.index()] += muonBasic.lastIndex() + 1 - newEntryNb[muon.index()]; // adding the offset of muons, muonBasic.lastIndex() start at -1
+            if (int(muon.trackType()) == 0) {                                                    // for now only do this to global tracks
+              newMatchIndex[matchIdx] = newEntryNb[muon.index()];                                // add the  updated index of this muon as a match to mch track
+              newMatchIndex[matchIdx] += muonBasic.lastIndex() + 1 - newEntryNb[muon.index()];   // adding the offset, muonBasic.lastIndex() start at -1
+            }
+          } else {
+            newMatchIndex[muon.index()] = -1;
+          }
+        }
+
+        else if (int(muon.trackType() == 4)) { // an MCH track
+          // in this case the matches should be filled from the other types but we need to check
+          if (newMatchIndex.count(muon.index()) == 0) { // if an entry for this mch was not added it simply mean that non of the global tracks were matched to it
+            newMatchIndex[muon.index()] = -1;
+          }
+        }
+
         muonBasic(event.lastIndex(), trackFilteringTag, muon.pt(), muon.eta(), muon.phi(), muon.sign());
         muonExtra(muon.nClusters(), muon.pDca(), muon.rAtAbsorberEnd(),
                   muon.chi2(), muon.chi2MatchMCHMID(), muon.chi2MatchMCHMFT(),
-                  muon.matchScoreMCHMFT(), muon.matchMFTTrackId(), muon.matchMCHTrackId(), muon.mchBitMap(), muon.midBitMap(), muon.midBoards(), muon.trackType());
+                  muon.matchScoreMCHMFT(), newMatchIndex.find(muon.index())->second, muon.mchBitMap(), muon.midBitMap(), muon.midBoards(), muon.trackType());
         if constexpr (static_cast<bool>(TMuonFillMap & VarManager::ObjTypes::MuonCov)) {
           muonCov(muon.x(), muon.y(), muon.z(), muon.phi(), muon.tgl(), muon.signed1Pt(),
                   muon.cXX(), muon.cXY(), muon.cYY(), muon.cPhiX(), muon.cPhiY(), muon.cPhiPhi(),

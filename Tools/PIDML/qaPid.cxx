@@ -18,7 +18,7 @@
 #include "Framework/HistogramRegistry.h"
 #include "Framework/StaticFor.h"
 #include "Common/DataModel/TrackSelectionTables.h"
-#include "Common/Core/PID/PIDResponse.h"
+#include "Common/DataModel/PIDResponse.h"
 #include <TParameter.h>
 
 using namespace o2;
@@ -502,8 +502,8 @@ struct EvaluatePid {
   Configurable<float> nsigmacut{"nsigmacut", 2.5, "Value of the NSigma cut"};
   Configurable<int> strategy{"strategy", 1, "1-PID with Nsigma method, 2-PID with NSigma and condition for minimal Nsigma value for particle, 3-Exlcusive condition for NSigma, 4-Bayesian PID"};
 
-  Filter trackFilter = aod::track::isGlobalTrack == static_cast<uint8_t>(true);
-  using pidTracks = soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::McTrackLabels, aod::TracksExtended, aod::TrackSelection, aod::pidTOFbeta, aod::pidTPCPi, aod::pidTPCPr, aod::pidTPCKa, aod::pidTPCEl, aod::pidTPCMu, aod::pidTOFPi, aod::pidTOFPr, aod::pidTOFKa, aod::pidTOFEl, aod::pidTOFMu, aod::pidBayes>>;
+  Filter trackFilter = requireGlobalTrackInFilter();
+  using pidTracks = soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::McTrackLabels, aod::TracksDCA, aod::TrackSelection, aod::pidTOFbeta, aod::pidTPCPi, aod::pidTPCPr, aod::pidTPCKa, aod::pidTPCEl, aod::pidTPCMu, aod::pidTOFPi, aod::pidTOFPr, aod::pidTOFKa, aod::pidTOFEl, aod::pidTOFMu, aod::pidBayes>>;
 
   void process(pidTracks const& tracks, aod::McParticles const& mcParticles)
   {

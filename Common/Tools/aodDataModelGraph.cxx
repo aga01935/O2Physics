@@ -10,7 +10,7 @@
 // or submit itself to any jurisdiction.
 #include "Framework/AnalysisDataModel.h"
 #include "PWGHF/DataModel/HFSecondaryVertex.h"
-#include "Common/Core/PID/PIDResponse.h"
+#include "Common/DataModel/PIDResponse.h"
 #include "Common/DataModel/Multiplicity.h"
 #include "Common/DataModel/Centrality.h"
 #include "Common/DataModel/TrackSelectionTables.h"
@@ -72,14 +72,14 @@ static std::vector<std::pair<std::string, StyleType>> tableStyles = {
   {"HfCandProng", StyleType::BLUE},
   {"pidResp", StyleType::GREEN},
   {"Mults", StyleType::GREEN},
-  {"CentV0Ms", StyleType::GREEN},
+  {"CentRun2V0Ms", StyleType::GREEN},
   {"Timestamps", StyleType::GREEN},
   {"Jet", StyleType::BLUE},
   {"Mc", StyleType::RED},
   {"V0Datas", StyleType::GREEN},
   {"CascData", StyleType::GREEN},
   {"TrackSelection", StyleType::GREEN},
-  {"TracksExtended", StyleType::GREEN},
+  {"TracksDCA", StyleType::GREEN},
   {"Transient", StyleType::GREEN},
   {"Extension", StyleType::GREEN},
 };
@@ -247,7 +247,7 @@ int main(int, char**)
   displayEntity<FDDs>();
   displayEntity<HMPIDs>();
 
-  displayEntities<Collisions, CentV0Ms, Mults, Timestamps>();
+  displayEntities<Collisions, CentRun2V0Ms, Mults, Timestamps>();
   displayEntity<McCollisions>();
   displayEntity<McCollisionLabels>();
 
@@ -258,7 +258,7 @@ int main(int, char**)
   displayEntity<FV0Cs>();
   displayEntity<Run2BCInfos>();
 
-  displayEntities<Tracks, TracksCov, TracksExtra, TracksExtended, TrackSelection,
+  displayEntities<Tracks, TracksCov, TracksExtra, TracksDCA, TrackSelection,
                   pidTOFFullEl, pidTOFFullMu, pidTOFFullPi,
                   pidTOFFullKa, pidTOFFullPr, pidTOFFullDe,
                   pidTOFFullTr, pidTOFFullHe, pidTOFFullAl,
@@ -281,8 +281,8 @@ int main(int, char**)
 
   displayEntities<MFTTracks, FwdTracks, FwdTracksCov>();
 
-  displayEntities<Hf2Prong, HfCandProng2>();
-  displayEntities<Hf3Prong, HfCandProng3>();
+  displayEntities<Hf2Prongs, HfCandProng2>();
+  displayEntities<Hf3Prongs, HfCandProng3>();
 
   graphFooter();
   return 0;

@@ -183,6 +183,8 @@ void chargedSpectra::processData(CollisionTableData::iterator const& collision, 
  * Entrypoint to processes mc.
  */
 //**************************************************************************************************
+Preslice<chargedSpectra::TrackTableMC> perCollision = aod::track::collisionId;
+
 void chargedSpectra::processMC(CollisionTableMCTrue::iterator const& mcCollision, CollisionTableMC const& collisions, TrackTableMC const& tracks, ParticleTableMC const& particles)
 {
   histos.fill(HIST("collision_ambiguity"), collisions.size());
@@ -202,7 +204,7 @@ void chargedSpectra::processMC(CollisionTableMCTrue::iterator const& mcCollision
     vars.isAcceptedEvent = false;
   } else {
     for (auto& collision : collisions) {
-      auto curTracks = tracks.sliceBy(aod::track::collisionId, collision.globalIndex());
+      auto curTracks = tracks.sliceBy(perCollision, collision.globalIndex());
       initEvent(collision, curTracks);
       processMeas<true>(collision, curTracks);
       break; // for now look only at first collision...
@@ -274,7 +276,7 @@ void chargedSpectra::initEvent(const C& collision, const T& tracks)
   }
 
   vars.isAcceptedEvent = false;
-  if (collision.posZ() < 10.f) {
+  if (std::abs(collision.posZ()) < 10.f) {
     if (isRun3 ? collision.sel8() : collision.sel7()) {
       if ((isRun3 || isMC) ? true : collision.alias()[kINT7]) {
         vars.isAcceptedEvent = true;
@@ -299,7 +301,7 @@ void chargedSpectra::initEventMC(const C& collision, const P& particles)
     ++vars.multTrue;
   }
   // TODO: also determine event class and check if true z vtx positin is good
-  vars.isAcceptedEventMC = ((collision.posZ() < 10.f) && (vars.multTrue > 0));
+  vars.isAcceptedEventMC = ((std::abs(collision.posZ()) < 10.f) && (vars.multTrue > 0));
 }
 
 //**************************************************************************************************

@@ -103,10 +103,10 @@ struct ReconstructedTask {
   OutputObj<TH2F> pDiff{TH2F("pDiff", "pDiff;#it{p}_{MC} #it{p}_{Rec} (GeV/#it{c})", 500, -2, 2, PDGBINNING)};
 
   Filter trackAcceptance = (nabs(aod::track::eta) < 0.8f);
-  Filter trackCuts = ((aod::track::isGlobalTrack == (uint8_t) true) || (aod::track::isGlobalTrackSDD == (uint8_t) true));
+  Filter trackCuts = ((requireGlobalTrackInFilter()) || (aod::track::isGlobalTrackSDD == (uint8_t) true));
 
   void process(soa::Join<aod::Collisions, aod::McCollisionLabels>::iterator const& collision,
-               soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksExtended, aod::McTrackLabels, aod::TrackSelection>> const& tracks,
+               soa::Filtered<soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA, aod::McTrackLabels, aod::TrackSelection>> const& tracks,
                aod::McParticles& mcParticles, aod::McCollisions const& mcCollisions)
   {
     LOGF(info, "vtx-z (data) = %f | vtx-z (MC) = %f", collision.posZ(), collision.mcCollision().posZ());

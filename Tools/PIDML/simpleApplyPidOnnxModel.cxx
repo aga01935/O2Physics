@@ -17,7 +17,7 @@
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
 #include "Common/DataModel/TrackSelectionTables.h"
-#include "Common/Core/PID/PIDResponse.h"
+#include "Common/DataModel/PIDResponse.h"
 #include "Tools/PIDML/pidOnnxModel.h"
 
 #include <string>
@@ -41,25 +41,27 @@ struct SimpleApplyOnnxModelTask {
   Configurable<bool> cfgUseTOF{"useTOF", true, "Use ML model with TOF signal"};
   Configurable<int> cfgPid{"pid", 211, "PID to predict"};
 
-  // TODO: This is a quick solution that uses CCDB to store files for Hyperloop.
-  // In the future, they should be on cvmfs or somewhere else.
-  Configurable<std::string> cfgModelDir{"model-dir", "http://alice-ccdb.cern.ch/Users/m/mkabus/pidml/onnx_models", "base path to the directory with ONNX models"};
-  Configurable<std::string> cfgScalingParamsFile{"scaling-params", "http://alice-ccdb.cern.ch/Users/m/mkabus/pidml/onnx_models/train_208_mc_with_beta_and_sigmas_scaling_params.json", "base path to the ccdb JSON file with scaling parameters from training"};
-  // Paths to local files
-  // Configurable<std::string> cfgModelDir{"model-dir", "/home/maja/CERN_part/CERN/PIDML/onnx_models", "base path to the directory with ONNX models"};
-  // Configurable<std::string> cfgScalingParamsFile{"scaling-params", "/home/maja/CERN_part/CERN/PIDML/onnx_models/train_208_mc_with_beta_and_sigmas_scaling_params.json", "JSON file with scaling parameters from training"};
+  // TODO: CCDB does not support ROOT files yet. Temporary solution: git repository with ML models
+  // Paths given here are relative to the main models directory $MLMODELS_ROOT
+  Configurable<std::string> cfgScalingParamsFile{"scaling-params", "train_208_mc_with_beta_and_sigmas_scaling_params.json", "JSON file with scaling parameters from training"};
+
+  // Configurable<std::string> cfgModelDir{"model-dir", "http://alice-ccdb.cern.ch/Users/m/mkabus/pidml/onnx_models", "base path to the directory with ONNX models"};
+  // Configurable<std::string> cfgScalingParamsFile{"scaling-params", "http://alice-ccdb.cern.ch/Users/m/mkabus/pidml/onnx_models/train_208_mc_with_beta_and_sigmas_scaling_params.json", "base path to the ccdb JSON file with scaling parameters from training"};
+  //  Paths to local files
+  //  Configurable<std::string> cfgModelDir{"model-dir", "/home/maja/CERN_part/CERN/PIDML/onnx_models", "base path to the directory with ONNX models"};
+  //  Configurable<std::string> cfgScalingParamsFile{"scaling-params", "/home/maja/CERN_part/CERN/PIDML/onnx_models/train_208_mc_with_beta_and_sigmas_scaling_params.json", "JSON file with scaling parameters from training"};
 
   Produces<o2::aod::MlPidResults> pidMLResults;
 
-  Filter trackFilter = aod::track::isGlobalTrack == (uint8_t) true;
+  Filter trackFilter = requireGlobalTrackInFilter();
   // Minimum table requirements for sample model:
-  // TPC signal (FullTracks), TOF signal (TOFSignal), TOF beta (pidTOFbeta), dcaXY and dcaZ (TracksExtended)
+  // TPC signal (FullTracks), TOF signal (TOFSignal), TOF beta (pidTOFbeta), dcaXY and dcaZ (TracksDCA)
   // Filter on isGlobalTrack (TracksSelection)
-  using BigTracks = soa::Filtered<soa::Join<aod::FullTracks, aod::TracksExtended, aod::pidTOFbeta, aod::TrackSelection, aod::TOFSignal>>;
+  using BigTracks = soa::Filtered<soa::Join<aod::FullTracks, aod::TracksDCA, aod::pidTOFbeta, aod::TrackSelection, aod::TOFSignal>>;
 
   void init(InitContext const&)
   {
-    pidModel = PidONNXModel(cfgModelDir.value, cfgScalingParamsFile.value, cfgPid.value, cfgUseTOF.value);
+    pidModel = PidONNXModel(cfgScalingParamsFile.value, cfgPid.value, cfgUseTOF.value);
   }
 
   void process(BigTracks const& tracks)
